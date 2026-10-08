@@ -350,8 +350,8 @@ main{max-width:640px;margin:0 auto;padding:0 var(--g) calc(var(--tabh) + 36px + 
 
 #leaf{position:absolute;inset:0;z-index:0}
 .leaflet-container{background:var(--land);font-family:var(--sans)}
-.leaflet-tile-pane{filter:sepia(.32) saturate(.9) hue-rotate(-6deg) contrast(.96)}
-@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:sepia(.5) hue-rotate(-18deg) saturate(1.6) brightness(.85)}}
+.leaflet-tile-pane{filter:grayscale(.85) sepia(.45) saturate(.9) brightness(1.03) contrast(.92)}
+@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:grayscale(1) invert(1) sepia(.55) hue-rotate(-25deg) saturate(1.8) brightness(.62) contrast(1.15)}}
 .leaflet-control-attribution{background:var(--glass-card)!important;color:var(--t3)!important;font-size:9.5px!important;border-radius:8px 0 0 0}
 .leaflet-control-attribution a{color:var(--t2)!important}
 .mapcard .legend,.mapcard .mapctl{z-index:500}
@@ -931,7 +931,7 @@ const Leaf=(function(){let map=null,layer=null,me=null,did=false;
  function init(){$('#map').style.display='none';$('#leaf').hidden=false;const n=document.querySelector('.mapnote');if(n)n.hidden=true;
   map=L.map('leaf',{zoomControl:false,attributionControl:true,zoomSnap:.5}).setView(here(),15);
   const dark=matchMedia('(prefers-color-scheme: dark)').matches;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(dark?'dark_all':'light_all')+'/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
   map.attributionControl.setPrefix(false);layer=L.layerGroup().addTo(map);
   $('#zIn').onclick=()=>map.zoomIn();$('#zOut').onclick=()=>map.zoomOut();$('#zMe').onclick=()=>map.flyTo(here(),Math.max(map.getZoom(),16),{duration:.6});
   map.on('zoomend',labels);window.addEventListener('resize',()=>map.invalidateSize())}
@@ -1012,11 +1012,19 @@ function renderKit(){$('#phrases').innerHTML=PH.map((p,i)=>`<button class="phr" 
 let watchId=null;
 function stopGps(){if(watchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watchId);watchId=null;S.pos=null}
 function startGps(manual){if(!('geolocation' in navigator)){if(manual)toast('No location on this device');return}
- try{stopGps();watchId=navigator.geolocation.watchPosition(p=>{const first_=S.src!=='gps';const pos=[p.coords.latitude,p.coords.longitude];
-   if(km(pos,[41.15,-8.63])>40){stopGps();if(manual)toast('You seem far from Porto');return}
-   S.pos=pos;S.src='gps';if(first_){toast('Found you');}refresh()},
-  e=>{stopGps();S.src=S.zone?'zone':null;if(manual)toast('Location is blocked here. Pick a spot.');if(manual&&!S.zone)openZones()},{enableHighAccuracy:true,maximumAge:30000,timeout:15000})}catch(e){}}
-
+ const ok=p=>{const first_=S.src!=='gps';const pos=[p.coords.latitude,p.coords.longitude];
+   if(km(pos,[41.15,-8.63])>45){if(manual)toast('You seem far from Porto. Pick a spot.');return}
+   S.pos=pos;S.src='gps';store.set('gps',true);if(first_)toast('Found you');refresh()};
+ const bad=e=>{if(watchId==null&&!manual)return;stopGps();S.src=S.zone?'zone':null;store.set('gps',false);refresh();
+   if(!manual)return;if(e&&e.code===1)openGpsHelp();else toast('No GPS fix yet. Try again outside.')};
+ try{stopGps();if(manual)toast('Finding you…');
+  navigator.geolocation.getCurrentPosition(p=>{ok(p);if(watchId==null)watchId=navigator.geolocation.watchPosition(ok,()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:20000})},bad,{enableHighAccuracy:true,maximumAge:60000,timeout:20000})}catch(e){}}
+function openGpsHelp(){showSheet(`<div class="sh-head"><div><h2>Location is off for this page</h2><p class="sh-sub">The iPhone said no. Two switches fix it.</p></div><button class="iconbtn press" data-act="close" aria-label="Close">${I.x}</button></div>
+ <div class="group" style="margin-top:16px">
+ <div class="rule"><h3>1 · iPhone Settings</h3><p>Privacy &amp; Security → Location Services → on. Then scroll to <b>Safari Websites</b> → <b>While Using the App</b>.</p></div>
+ <div class="rule"><h3>2 · In Safari</h3><p>Tap the page menu in the address bar → <b>Website Settings</b> → Location → <b>Allow</b> (or Ask).</p></div>
+ <div class="rule"><h3>3 · Come back</h3><p>Reload the page and tap “Use my location” again.</p></div></div>
+ <div class="acts" style="margin-top:16px"><button class="btn primary press" data-act="gps" style="flex:1;height:48px;border-radius:14px">Try again</button><button class="btn press" data-act="zones" style="flex:1;height:48px;border-radius:14px">Pick a spot instead</button></div>`,'Location help')}
 /* ───────────── shell ───────────── */
 function refresh(){if(S.tab==='now')renderNow();if(S.tab==='see')renderSee();if(S.tab==='eat')renderEat()}
 function go(v){if(v===S.tab){window.scrollTo({top:0,behavior:'smooth'});return}S.tab=v;$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
@@ -1029,6 +1037,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button,a,.widget
  const act=t.dataset.act;
  if(act==='close'){closeSheet();return}
  if(act==='gps'){closeSheet();startGps(true);return}
+ if(act==='zones'){openZones();return}
  if(act==='done'||act==='save'){const id=t.dataset.pid,key=act==='done'?'done':'saved';S[key][id]=!S[key][id];if(!S[key][id])delete S[key][id];store.set(key,S[key]);toast(key==='done'?(S.done[id]?'Marked as seen':'Unmarked'):(S.saved[id]?'Saved':'Removed'));openPlace(id);refresh();return}
  if(act==='map'){const id=t.dataset.pid;closeSheet();S.mode='map';S.focus=id;go('see');renderSee();setTimeout(()=>MAPS().focus(id),120);return}
  if(t.id==='wLight'&&t.dataset.id){openPlace(t.dataset.id);return}
@@ -1071,7 +1080,7 @@ const BIRD_URL=(getComputedStyle(document.documentElement).getPropertyValue('--b
 renderCity();renderKit();renderChips();
 if(store.get('seen',false))$('#cover').hidden=true;
 const h0=(location.hash||'').slice(1);if(['see','eat','city','kit'].includes(h0)){S.tab='';go(h0)}else renderNow();
-startGps(false);
+if(store.get('gps',false))startGps(false);
 setInterval(()=>{if(document.hidden)return;if(S.tab==='now'){const p=lisbonParts(new Date());$('#kicker').textContent=`${p.wd} ${p.day} ${p.month} · ${fmtT(new Date())}`;renderLight()}},30000);
 setInterval(()=>{if(S.tab==='now'&&!document.hidden)renderNow()},5*60000);
 })();

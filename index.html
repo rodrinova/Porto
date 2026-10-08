@@ -402,7 +402,7 @@ main{max-width:640px;margin:0 auto;padding:0 var(--g) calc(var(--tabh) + 36px + 
     <div class="lt-wrap" data-lt><h1 class="lt">See.</h1></div>
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input id="q" type="search" placeholder="Siza, gold, francesinha, sunset" autocomplete="off" enterkeyhint="search" aria-label="Search places"><button class="clr" id="qClr" type="button" aria-label="Clear" hidden>×</button></label>
     <div class="ctrl">
-      <div class="seg" id="seg"><span class="thumb"></span><button class="on" data-mode="list">List</button><button data-mode="map">Map</button></div>
+      <div class="seg r" id="seg"><span class="thumb"></span><button data-mode="list">List</button><button class="on" data-mode="map">Map</button></div>
       <button class="menu press" id="areaBtn"><span id="areaLbl">All areas</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 4.5l3 3 3-3"/></svg></button>
     </div>
     <div class="chips" id="themeChips"></div>
@@ -759,7 +759,7 @@ function lightState(now){const s=sunTimes(now,41.146,-8.611),t=now.getTime(),ris
 
 
 /* ───────────── state ───────────── */
-const S={pos:null,src:store.get('zone',null)?'zone':null,zone:store.get('zone',null),done:store.get('done',{}),saved:store.get('saved',{}),dismissed:store.get('dismissed',{}),prefs:store.get('prefs',null),theme:null,zf:null,meal:null,tab:'now',mode:'list',focus:null};
+const S={pos:null,src:store.get('zone',null)?'zone':null,zone:store.get('zone',null),done:store.get('done',{}),saved:store.get('saved',{}),dismissed:store.get('dismissed',{}),prefs:store.get('prefs',null),theme:null,zf:null,meal:null,tab:'now',mode:'map',focus:null};
 function here(){return S.pos||(S.zone&&ZONES[S.zone].c)||ZONES.aliados.c}
 function dist(x){return x.c?km(here(),x.c):null}
 function zoneName(z){return ZONES[z]?ZONES[z].n:''}
